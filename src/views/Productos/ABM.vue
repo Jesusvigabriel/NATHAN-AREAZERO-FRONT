@@ -69,10 +69,29 @@
                 </v-data-table>
             </v-col>
         </v-row>
-        <v-row v-if="listaArticulos.length>0 && this.textil">
+        <v-row v-if="listaArticulos.length>0 && this.textil && this.idEmpresa != '258'">
             <v-col class="py-0" >
                 <v-data-table 
                     :headers="cabecerasTextil" 
+                    :items="listaArticulos"  
+                    :footer-props="{itemsPerPageOptions:[10,30,100,-1]}"   
+                    :items-per-page="30" 
+                    :search="textoBusqueda"
+                    class="elevation-3" 
+                >
+                    <template v-slot:item.Acciones="{ item }">
+                        <v-icon color="blue" @click="editarArticulo(item)" >mdi-file-edit-outline</v-icon>
+                        <!-- <v-icon color="red" @click="eliminarArticulo(item)" v-bind="attrs" v-on="on">mdi-delete-outline</v-icon> -->
+                    </template>
+
+                </v-data-table>
+            </v-col>
+        </v-row>
+
+        <v-row v-if="listaArticulos.length>0 && this.textil && this.idEmpresa == '258'">
+            <v-col class="py-0" >
+                <v-data-table 
+                    :headers="cabecerasTextilClue" 
                     :items="listaArticulos"  
                     :footer-props="{itemsPerPageOptions:[10,30,100,-1]}"   
                     :items-per-page="30" 
@@ -212,6 +231,17 @@ export default {
                 {text: 'Barcode', value: 'Barcode'},
                 {text: 'Largo', value: 'Ancho'},
                 {text: 'Ancho', value: 'Largo'},
+                {text: 'Alto', value: 'Alto'},
+                {text: 'Peso', value: 'Peso'},
+                {text: 'Calidad', value: 'Precio'},
+                {text: '', value: 'Acciones'},
+            ],
+            cabecerasTextilClue: [
+                {text: 'Id', value: 'Id'},
+                {text: 'Nombre', value: 'Nombre'},
+                {text: 'Barcode', value: 'Barcode'},
+                {text: 'Largo', value: 'Largo'},
+                {text: 'Ancho', value: 'Ancho'},
                 {text: 'Alto', value: 'Alto'},
                 {text: 'Peso', value: 'Peso'},
                 {text: 'Calidad', value: 'Precio'},
@@ -574,7 +604,7 @@ export default {
                     console.log(response)
                     if(response.LOTE == true){
                         this.tieneLOTE = true
-                        this.tienePART = flase
+                        this.tienePART = false
                         this.cabeceras =  [
                             {text: 'DeliveryBatch', value: 'Embarque'},
                             {text: 'BoxNumber', value: 'Lote'},
@@ -685,6 +715,49 @@ export default {
 
             const buf=await workbook.xlsx.writeBuffer()
             saveAs(new Blob([buf]), `Importación_de_productosLOTE.xlsx`)
+        } else if(this.tienePART){
+            const workbook=new excel.Workbook()
+            const worksheet=workbook.addWorksheet("Productos")
+
+            let renglon=1
+            ['', '', '', '', '', '', '', '', '']
+            worksheet.views = [{state: 'frozen', ySplit: 1}]
+            worksheet.autoFilter = 'A1:X1'
+            //Nombres de las columnas excel
+            const cabeceras=[
+                {header: 'Partida', width: 30}, 
+                {header: 'Barcode', width: 30},
+                {header: 'Descripcion', width: 30},
+                {header: 'UnXCaja', width: 15},
+                {header: 'Largo', width: 20}, 
+                {header: 'Ancho', width: 20},
+                {header: 'Alto', width: 15},
+                {header: 'Peso', width: 15},
+                {header: 'Calidad/Precio', width: 25},
+                
+            
+            ]
+            worksheet.columns=[...cabeceras]
+            renglon++
+                        
+
+                worksheet.eachRow ( (row, rowNumber) => {
+                row.eachCell ( (cell, colNumber) => {
+                    if (rowNumber==1) {
+                        cell.font={size: 16, bold: true}
+                    } else {
+                        if (rowNumber==renglon) {
+                            cell.font={size: 16, bold: false}
+                        } else {
+                            cell.font={size: 14}
+                        }
+                    }
+                    })
+                } )
+
+            const buf=await workbook.xlsx.writeBuffer()
+            saveAs(new Blob([buf]), `Importación_de_productos.xlsx`)
+      
         } else {
             const workbook=new excel.Workbook()
             const worksheet=workbook.addWorksheet("Productos")

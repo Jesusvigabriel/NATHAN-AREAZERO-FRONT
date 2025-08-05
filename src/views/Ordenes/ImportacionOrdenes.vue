@@ -56,6 +56,7 @@ export default {
             textil:null,
             fecha: [],
             tienePART: false,
+            empresa: {},
         }
     },
 
@@ -156,31 +157,71 @@ export default {
                 let detalleDeLaOrden=[]
                 let promises = [] 
                 let codes =[]
-                
-                if(!this.tienePART){
-                    //comparador de codeempresa y barcode
-                    for(const unItem of items){
-                        //cambiar metodo
-                        const promise = productos.getByCodeEmpresaAndEmpresa(unItem["Barcode Producto"].toString().trim(), this.idEmpresa)
-                        .then(response =>{
-                            console.log(response)
-                            if(response.Barcode.toString().trim() == unItem.Producto.toString().trim()){
-                                detalleDeLaOrden.push({cantidad: unItem.Cantidad, importe: unItem.Importe, barcode: response.Barcode})
-                                if(this.textil){
-                                    totalUnOrden = parseInt(totalUnOrden) + parseInt(unItem.Cantidad)
-                                }
-                                this.listaBarcode.push(unItem["Barcode Producto"])
-                            }else{
-                                productoFallido=true
-                                codes.push({codeEmpresa: unItem.Producto.toString(), barcode: unItem["Barcode Producto"]})
+                let repetidos=0
+                let tipoError=[]
+
+                //comprueba que no halla codigos de barra duplicados
+                items.forEach(item =>{
+                    for(const codigo of items){
+                        if(item['Barcode Producto'].toString().trim() == codigo['Barcode Producto'].toString().trim()){
+                            repetidos = repetidos + 1
+                            if(repetidos == 2){
+                                tipoError.push("barcode duplicado")
+                                productoFallido = true
+                                codes.push({codeEmpresa: item.Producto.toString(), barcode: item["Barcode Producto"]})
                             }
-                        })
-                        .catch(error =>{
-                            console.log(error)
-                            productoFallido=true
-                            this.mensajes.push({texto: unItem["Barcode Producto"] + " " + error, color: "red"})
-                        })
-                        promises.push(promise) // Agregar la promesa al array
+                        }
+                    }
+                    repetidos= 0
+                })
+                if(!this.tienePART){
+                    if(this.idEmpresa==268){
+                        //comparador de codeempresa y barcode
+                        for(const unItem of items){
+                            const promise = productos.getByBarcodeAndEmpresa(unItem["Barcode Producto"].toString().trim(), this.idEmpresa)
+                            .then(response =>{
+                                console.log(response)
+                                if(response.Nombre.toString().trim() == unItem.Producto.toString().trim()){
+                                    detalleDeLaOrden.push({cantidad: unItem.Cantidad, importe: unItem.Importe, barcode: unItem["Barcode Producto"]})
+                                    if(this.textil){
+                                        totalUnOrden = parseInt(totalUnOrden) + parseInt(unItem.Cantidad)
+                                    }
+                                    this.listaBarcode.push(unItem["Barcode Producto"])
+                                }else{
+                                    productoFallido=true
+                                    codes.push({Nombre: unItem.Producto.toString(), barcode: unItem["Barcode Producto"]})
+                                }
+                            })
+                            .catch(error =>{
+                                console.log(error)
+                                productoFallido=true
+                                this.mensajes.push({texto: unItem["Barcode Producto"] + " " + error, color: "red"})
+                            })
+                            promises.push(promise) // Agregar la promesa al array
+                        }
+                    }else{
+                        //comparador de codeempresa y barcode
+                        for(const unItem of items){
+                            const promise = productos.getByBarcodeAndEmpresa(unItem["Barcode Producto"].toString().trim(), this.idEmpresa)
+                            .then(response =>{
+                                if(response.CodeEmpresa.toString().trim() == unItem.Producto.toString().trim()){
+                                    detalleDeLaOrden.push({cantidad: unItem.Cantidad, importe: unItem.Importe, barcode: unItem["Barcode Producto"]})
+                                    if(this.textil){
+                                        totalUnOrden = parseInt(totalUnOrden) + parseInt(unItem.Cantidad)
+                                    }
+                                    this.listaBarcode.push(unItem["Barcode Producto"])
+                                }else{
+                                    productoFallido=true
+                                    codes.push({codeEmpresa: unItem.Producto.toString(), barcode: unItem["Barcode Producto"]})
+                                }
+                            })
+                            .catch(error =>{
+                                console.log(error)
+                                productoFallido=true
+                                this.mensajes.push({texto: unItem["Barcode Producto"] + " " + error, color: "red"})
+                            })
+                            promises.push(promise) // Agregar la promesa al array
+                        }
                     }
                 }else{
                     for(const unItem of items){
@@ -257,9 +298,17 @@ export default {
                         }
                     }
                 }else{
-                    for(const code of codes){
-                        const error="El codeEmpresa " + code.codeEmpresa + " no corresponde al producto " + code.barcode
-                        this.mensajes.push({texto: error, color: "red"})
+                    console.log(tipoError[0])
+                    if(tipoError[0] == "barcode duplicado"){
+                        for(const code of codes){
+                            const error="El Barcode " + code.barcode + " esta duplicado "
+                            this.mensajes.push({texto: error, color: "red"})
+                        }
+                    }else{
+                        for(const code of codes){
+                            const error="El codeEmpresa " + code.codeEmpresa + " no corresponde al producto " + code.barcode
+                            this.mensajes.push({texto: error, color: "red"})
+                        }
                     }
                 }
             }
@@ -318,6 +367,7 @@ export default {
             this.idEmpresa=idEmpresaElegida
             empresa.getOne(idEmpresaElegida)
             .then(response => {
+                this.empresa = response
                 if (response.ClienteTextil){
                     this.textil = true
                 }

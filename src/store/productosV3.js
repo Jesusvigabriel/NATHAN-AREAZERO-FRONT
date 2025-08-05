@@ -54,6 +54,23 @@ const productosV3= {
         )            
     },
 
+    async registraReposicionamientoExcelCantidad(idEmpresa,idProducto, posicionOrigen, posicionDestino, cantidadAPosicionar,barcodeProducto, usuario) {
+        return new Promise (
+            function (resolve, reject) {
+                const Ruta=`/producto/registraReposicionamientoExcelCantidad/${idEmpresa}/${idProducto}/${posicionOrigen}/${posicionDestino}/${cantidadAPosicionar}/${barcodeProducto}/${usuario}`
+                API.acceder(
+                    {
+                        Ruta,
+                        Metodo: "POST",
+                        Cartel: "Registrando reposicionamiento..."
+                    }
+                )
+                .then(data => {resolve(data)})
+                .catch(puteada => {reject(puteada)})
+            }
+        )            
+    },
+
     async updatePosicionByLoteAndIdPosicion(boxNumber, idPosicion, userName) {
         return new Promise (
             function (resolve, reject) {
@@ -157,6 +174,24 @@ const productosV3= {
             }
         ) 
     },
+
+    async updatePosicionLote(payload){
+        return new Promise (
+            function (resolve, reject) {
+                API.acceder(
+                    {
+                        Ruta: '/productos/updatePosicionLote',
+                        Metodo: "POST", 
+                        Body: payload,
+                        Cartel: "Actualizando lote..."
+                    }
+                )
+                .then(data => {resolve(data)})
+                .catch(puteada => {reject(puteada)})
+            }
+        ) 
+    },
+
     async getLoteByBarcodeAndEmpresa(barcode, idEmpresa) {
         return new Promise (
             function (resolve, reject) {
