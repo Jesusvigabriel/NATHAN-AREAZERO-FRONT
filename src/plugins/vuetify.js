@@ -1,5 +1,5 @@
 // vuetify.js
-// (Configuración de Vuetify con soporte para tema claro y oscuro y paleta personalizada de AreaTech)
+// (Configuración de Vuetify con soporte para tema claro y oscuro y paleta personalizada de AreaZero)
 //
 // NOTA: Los colores están basados en la imagen de referencia, y el degradado se usa para la barra azul en ambos modos.
 // Si querés usar colores en CSS: var(--v-primary-base), etc.

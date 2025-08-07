@@ -6,6 +6,8 @@ html, .v-application {
   position: relative;
 }
 
+/* LOGOS DE FONDO COMENTADOS - NO SE MUESTRAN POR AHORA */
+/*
 .v-application::before {
   content: '';
   position: fixed;
@@ -23,6 +25,7 @@ html, .v-application {
   background-size: 90vw 90vh !important;
   opacity: 0.09 !important;
 }
+*/
 
 
 

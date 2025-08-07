@@ -17,7 +17,7 @@
             contain
             width="40"
             height="40"
-            alt="AreaTech"
+            alt="AreaZero"
             class="ml-2"
           />
         </v-toolbar-title>
@@ -450,35 +450,8 @@ export default {
           else if (m.modulo.includes('seguimientos')) this.ListaDeMenusSeguimientos.push(m);
         });
         
-        // Lógica para añadir el menú "Seguimientos" si el usuario es administrador
-        let esAdmin = false;
-        if (!store.state.usuarios.usuarioActual.IdEmpresa) { // Condición: Sin empresa asignada
-          try {
-            const userRoles = await roles.getUserRolesById(this.usuarioId);
-            // Condición: Rol ID es 1 (asumiendo que 1 es administrador)
-            if (userRoles && userRoles.length > 0 && userRoles[0].IdRole === 1) {
-              esAdmin = true;
-            }
-          } catch (roleError) {
-            console.error("Error al obtener roles de usuario para menú:", roleError);
-            // Decidir cómo manejar este error. Si falla, no se marcará como admin.
-          }
-        }
-
-        // Si es administrador y el menú de seguimientos aún no existe (no vino del backend para este admin)
-        if (esAdmin) {
-          const seguimientosMenuExists = this.ListaDeMenusSeguimientos.some(menu => menu.ruta === '/seguimientos');
-          if (!seguimientosMenuExists) {
-            this.ListaDeMenusSeguimientos.push({
-              nombre: "Panel de Seguimientos", // Nombre que se mostrará en el submenú
-              ruta: "/seguimientos",           // Ruta definida en Vue Router
-              modulo: "seguimientos"           // Identificador del módulo
-            });
-            console.log('Se añadió "Panel de Seguimientos" al menú');
-          } else {
-            console.log('El menú "Panel de Seguimientos" ya existía');
-          }
-        }
+        // El menú "Panel de Seguimientos" ahora viene dinámicamente del backend
+        // Ya no es necesario agregarlo manualmente
 
         const emailConfigExists = this.ListaDeMenusSeguridad.some(menu => menu.ruta === '/Seguridad/EmailConfig')
         if (!emailConfigExists) {

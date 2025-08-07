@@ -88,7 +88,7 @@
           </td>
           <td v-if="tieneLote">{{ item.Lote || '-' }}</td>
           <td>
-            <v-tooltip bottom v-if="item.posiciones && item.posiciones.length">
+            <v-tooltip bottom v-if="item.Posiciones && item.Posiciones.length">
               <template v-slot:activator="{ on, attrs }">
                 <v-chip 
                   small 
@@ -96,11 +96,11 @@
                   v-bind="attrs"
                   v-on="on"
                 >
-                  {{ item.posiciones[0].descripcion }}
+                  {{ item.Posiciones[0].Posicion || 'Sin posición' }}
                 </v-chip>
               </template>
-              <span v-if="item.posiciones[0].cantidad">
-                Cantidad: {{ item.posiciones[0].cantidad }}
+              <span v-if="item.Posiciones[0].Cantidad">
+                Cantidad: {{ item.Posiciones[0].Cantidad }}
               </span>
             </v-tooltip>
             <span v-else>-</span>
@@ -232,6 +232,7 @@ export default {
       detalle: [],
       pedirCantidadBultos: false,
       cantidadBultos: 0,
+      dialog: false,
       empresaConfig: {},
       textil: false,
       stockPosicionado: false,
@@ -338,8 +339,36 @@ let detallePayload = [];
               });
             }
           });
+        } else if (this.stockPosicionado) {
+          // Lógica para órdenes con SOLO stock posicionado (sin partidas)
+          this.detalle.forEach(item => {
+            if (item.Posiciones && item.Posiciones.length > 0) {
+              item.Posiciones.forEach(pos => {
+                detallePayload.push({
+                  IdProducto: item.IdProducto,
+                  Cantidad: item.CantidadSalida,
+                  Barcode: item.Barcode || item.CodeEmpresa,
+                  Lote: item.Lote || item.lote || null,
+                  idPartida: null,
+                  partida: null,
+                  IdPosicion: pos.IdPosicion
+                });
+              });
+            } else {
+              // Si no tiene posiciones, agregar sin IdPosicion
+              detallePayload.push({
+                IdProducto: item.IdProducto,
+                Cantidad: item.CantidadSalida,
+                Barcode: item.Barcode || item.CodeEmpresa,
+                Lote: item.Lote || item.lote || null,
+                idPartida: null,
+                partida: null,
+                IdPosicion: null
+              });
+            }
+          });
         } else {
-          // Lógica para órdenes sin partida o sin stock posicionado (mantener original)
+          // Lógica para órdenes sin partida ni stock posicionado
           detallePayload = this.detalle.map(i => ({
             IdProducto: i.IdProducto,
             Cantidad: i.CantidadSalida,
@@ -475,9 +504,13 @@ console.log('Payload que causó el error:', { detallePayload, Cabeceras });
         this.mostrandoCampoPartida = true
         this.$nextTick(() => this.$refs.partidaArticulo?.focus())
       } else {
-        // Si no hay partidas, pasar directamente a pedir la cantidad
-        this.mostrandoCampoCantidad = true
-        this.$nextTick(() => this.$refs.cantidadArticulo?.focus())
+        // Si no hay partidas y solo hay un ítem encontrado, seleccionarlo automáticamente
+        if (this.itemsEncontrados.length === 1) {
+          this.seleccionarItem(this.itemsEncontrados[0])
+        } else if (this.itemsEncontrados.length > 1) {
+          // Si hay múltiples ítems, mostrar selector
+          this.mostrarSelectorPartida(this.itemsEncontrados, codigo)
+        }
       }
     },
 
@@ -609,9 +642,6 @@ console.log('Payload que causó el error:', { detallePayload, Cabeceras });
       this.cantidadArticulo = 1
       this.itemsEncontrados = []
       this.$nextTick(() => this.$refs.barcodeArticulo?.focus())
-      this.cantidadArticulo = 1
-      this.barcodeArticulo = ''
-      this.$nextTick(() => this.$refs.barcodeArticulo && this.$refs.barcodeArticulo.focus())
     },
     actualizarValidacion (item) {
       item.validado = item.CantidadSalida === item.Unidades
