@@ -619,7 +619,13 @@ export default {
     
     roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
       .then(response => {
-        response[0].IdRole == 1 ? this.rolPermitido = true : this.rolPermitido = false
+        if(response[0].IdRole == 1){
+          this.rolPermitido = true
+        }else if(response[0].IdRole == 11){
+          this.rolPermitido = true
+        }else{
+          this.rolPermitido = false
+        }
       })
     .catch(error => {
       console.log(error)
