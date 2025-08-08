@@ -208,21 +208,23 @@ export default {
     },
 
     popularListaDeOrdenes() {
-      // roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
-      // .then(response => {
-      //   if (!store.state.usuarios.usuarioActual.IdEmpresa ) { 
-      //     if(response[0].IdRole == 1){
-      //       this.rolPermitido=true
-      //     }else{
-      //       this.rolPermitido=false
-      //     }
-      //   } else {
-      //     this.rolPermitido = false
-      //   }
-      // })
-      // .catch(error => {
-      //   console.log(error)
-      // })
+       roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
+       .then(response => {
+         if (!store.state.usuarios.usuarioActual.IdEmpresa ) { 
+           if(response[0].IdRole == 1){
+             this.rolPermitido=true
+           }else if(response[0].IdRole == 1){
+             this.rolPermitido=true
+           }else{
+            this.rolPermitido=false
+           }
+         } else {
+           this.rolPermitido = false
+         }
+       })
+       .catch(error => {
+         console.log(error)
+       })
 
       ordenes.getPendientes()
         .then(response => {
