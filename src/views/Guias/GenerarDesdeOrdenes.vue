@@ -733,15 +733,9 @@ console.log('[DEBUG] Respuesta getPreparadasNoGuiasByIdEmpresa:', response)
     this.fechaMarcarComoRetiraCliente=fechas.dateToString(fechas.getSumarDiasFecha(0))
     store.dispatch('empresas/cargarListaEmpresas', 'SoloActivas')
     // this.popularListaDeOrdenes()
-<<<<<<< HEAD
     emailTemplates.getByCode('ENVIAR_REMITO').then(t => {
       if (t && t.length) this.emailPrompt = t[0].Cuerpo
     })
-=======
-    // emailTemplates.getByCode('ENVIAR_REMITO').then(t => {
-    //   if (t && t.length) this.emailPrompt = t[0].Cuerpo
-    // })
->>>>>>> cambios-locales-temporales
   },
 }
 </script>
