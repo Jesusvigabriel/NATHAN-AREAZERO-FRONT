@@ -208,6 +208,7 @@ export default {
     },
 
     popularListaDeOrdenes() {
+<<<<<<< HEAD
        roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
        .then(response => {
          if (!store.state.usuarios.usuarioActual.IdEmpresa ) { 
@@ -225,6 +226,23 @@ export default {
        .catch(error => {
          console.log(error)
        })
+=======
+      // roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
+      // .then(response => {
+      //   if (!store.state.usuarios.usuarioActual.IdEmpresa ) { 
+      //     if(response[0].IdRole == 1){
+      //       this.rolPermitido=true
+      //     }else{
+      //       this.rolPermitido=false
+      //     }
+      //   } else {
+      //     this.rolPermitido = false
+      //   }
+      // })
+      // .catch(error => {
+      //   console.log(error)
+      // })
+>>>>>>> cambios-locales-temporales
 
       ordenes.getPendientes()
         .then(response => {
@@ -621,6 +639,7 @@ export default {
     
     roles.getUserRolesById(store.state.usuarios.usuarioActual.Id)
       .then(response => {
+<<<<<<< HEAD
         if(response[0].IdRole == 1){
           this.rolPermitido = true
         }else if(response[0].IdRole == 11){
@@ -628,6 +647,9 @@ export default {
         }else{
           this.rolPermitido = false
         }
+=======
+        response[0].IdRole == 1 ? this.rolPermitido = true : this.rolPermitido = false
+>>>>>>> cambios-locales-temporales
       })
     .catch(error => {
       console.log(error)

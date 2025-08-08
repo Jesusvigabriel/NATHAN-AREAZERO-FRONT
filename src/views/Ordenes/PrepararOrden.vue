@@ -88,6 +88,10 @@
           </td>
           <td v-if="tieneLote">{{ item.Lote || '-' }}</td>
           <td>
+<<<<<<< HEAD
+=======
+            <!-- Caso 1: Solo stock posicionado (Posiciones con mayúscula) -->
+>>>>>>> cambios-locales-temporales
             <v-tooltip bottom v-if="item.Posiciones && item.Posiciones.length">
               <template v-slot:activator="{ on, attrs }">
                 <v-chip 
@@ -103,6 +107,25 @@
                 Cantidad: {{ item.Posiciones[0].Cantidad }}
               </span>
             </v-tooltip>
+<<<<<<< HEAD
+=======
+            <!-- Caso 2: Stock posicionado + partida (posiciones con minúscula) -->
+            <v-tooltip bottom v-else-if="item.posiciones && item.posiciones.length">
+              <template v-slot:activator="{ on, attrs }">
+                <v-chip 
+                  small 
+                  color="primary" 
+                  v-bind="attrs"
+                  v-on="on"
+                >
+                  {{ item.posiciones[0].descripcion || 'Sin posición' }}
+                </v-chip>
+              </template>
+              <span v-if="item.posiciones[0].cantidad">
+                Cantidad: {{ item.posiciones[0].cantidad }}
+              </span>
+            </v-tooltip>
+>>>>>>> cambios-locales-temporales
             <span v-else>-</span>
           </td>
           <td>{{ item.Unidades }}</td>

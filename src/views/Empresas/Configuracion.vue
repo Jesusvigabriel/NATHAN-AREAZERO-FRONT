@@ -731,8 +731,11 @@ import SelectorEmpresa from '@/components/SelectorEmpresa.vue'
 import IngresoValorConfiguracion from "@/components/IngresoValorConfiguracion.vue"
 import store from '@/store'
 import empresas from '@/store/empresasV3'
+<<<<<<< HEAD
 import guias from "../../store/guias"
 import fechas from 'vue-lsi-util/fechas'
+=======
+>>>>>>> cambios-locales-temporales
 
 export default {
     name: "EmpresasConfiguracion",
@@ -744,7 +747,10 @@ export default {
             keyComponent: 0,
             datosValidos: false,
             idEmpresa: null,
+<<<<<<< HEAD
             guiasEmpresa: [],
+=======
+>>>>>>> cambios-locales-temporales
             configuracion: {},
             empresa: {},
             autogestionOpciones: [
@@ -784,6 +790,7 @@ export default {
         this.ocultarLoading()
       },
       registrarInformacion() {
+<<<<<<< HEAD
         let fechaActual = fechas.getHoy()
         let mesActual = fechaActual.substring(5,7)
         let añoActual = fechaActual.substring(0,4)
@@ -833,6 +840,31 @@ export default {
           }  
         })
         
+=======
+        this.validar()
+
+        if (this.datosValidos) {
+          const payload={}
+          Object.assign(payload, this.configuracion)
+          for (const unAtributo of Object.entries(payload)) {
+            if (unAtributo[0]!="Id" && unAtributo[0]!="IdEmpresa" && unAtributo[0]!="UnificarGuias" && unAtributo[0]!="TipoCliente" && unAtributo[0]!="Direccion" && unAtributo[0]!="ContactoOficina" && unAtributo[0]!="ContactoDeposito") {
+              payload[unAtributo[0]]=unAtributo[1].Variable+"|"+String(unAtributo[1].Valor)+"|"+String(unAtributo[1].Minimo)+"|"+String(unAtributo[1].Activo)+"|"+String(unAtributo[1].Predeterminado)
+            }
+          }
+          payload.UnificarGuias=this.configuracion.UnificarGuias
+          // console.log(payload);
+          empresas.saveConfiguracion(this.idEmpresa, payload)
+            .then(response => {
+              empresas.saveConfiguracionHistorico(this.idEmpresa, payload)
+              //Aca llamo a mi funcion Historico
+              // console.log("Respuesta de API", response);
+              store.dispatch("alertDialog/mostrar", {titulo: "Registración exitosa", mensaje: "Los datos se han registrado exitosamente"})
+            })
+            .catch(error => {
+              console.log("Error en API", error);
+            })
+        }  
+>>>>>>> cambios-locales-temporales
       },
       eligioEmpresa(idEmpresaElegida) {
           this.idEmpresa=idEmpresaElegida;
@@ -875,7 +907,10 @@ export default {
 
 
       guardarDatosEmpresa(){
+<<<<<<< HEAD
         
+=======
+>>>>>>> cambios-locales-temporales
         if(this.empresa.PART && this.empresa.LOTE){
           this.mostrarError("Los clientes no pueden tener contenedor y lote activos a la vez")
         }else{

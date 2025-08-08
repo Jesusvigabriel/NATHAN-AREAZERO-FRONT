@@ -15,8 +15,22 @@ import emailProcesoConfig from './emailProcesoConfig'
 Vue.use(Vuex)
 
 
-axios.defaults.baseURL=JSON.parse(process.env.VUE_APP_API).URL
-axios.defaults.auth=JSON.parse(process.env.VUE_APP_API).Credenciales
+// Configuración de la URL base de la API
+const apiConfig = process.env.VUE_APP_API ? JSON.parse(process.env.VUE_APP_API) : {};
+
+// Establecer la URL base de Axios
+if (apiConfig.URLV2) {
+  axios.defaults.baseURL = apiConfig.URLV2;
+} else if (apiConfig.URL) {
+  axios.defaults.baseURL = apiConfig.URL;
+}
+
+// Configurar autenticación si está disponible
+if (apiConfig.CredencialesV2) {
+  axios.defaults.auth = apiConfig.CredencialesV2;
+} else if (apiConfig.Credenciales) {
+  axios.defaults.auth = apiConfig.Credenciales;
+}
 
 export default new Vuex.Store({
   modules: {

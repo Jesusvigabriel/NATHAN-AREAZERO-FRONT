@@ -31,15 +31,9 @@ Vue.use(LSIUtil)
 Vue.config.productionTip = false
 Vue.config.devtools = process.env.NODE_ENV === 'development'
 
-// Configuración global de Axios usando la variable limpia
-const apiUrl = process.env.VUE_APP_API_URL
-if (!apiUrl) {
-  console.error('⚠️ VUE_APP_API_URL no está definida en .env')
-} else if (apiUrl.includes('localhost')) {
-  axios.defaults.baseURL = apiUrl
-} else {
-  axios.defaults.baseURL = apiUrl.replace(/^http:/, 'https:')
-}
+// La configuración de Axios se maneja en el store para mantener consistencia
+// Ver store/index.js para la configuración de la URL base
+console.log('Configuración de la API:', process.env.VUE_APP_API ? JSON.parse(process.env.VUE_APP_API) : 'No configurada');
 
 // Interceptor para registrar peticiones
 axios.interceptors.request.use(
