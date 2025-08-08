@@ -50,27 +50,48 @@ const guias= {
       const lineaSuperior=renglon
 
       renglon+=7
-      pdf.setFontSize(12).text(pdf.splitTextToSize(unaGuia.NombreDestino, 40)[0], margenIzquierdo, renglon)
-      pdf.setFontSize(8).text('REMITO CLIENTE', margenDerecho, renglon)
+      pdf.setFontSize(12).text(pdf.splitTextToSize(unaGuia.NombreDestino, 40)[0], margenIzquierdo, renglon-3)
+      //pdf.setFontSize(8).text('REMITO CLIENTE', margenDerecho, renglon)
+      pdf.setFontSize(10).text("OBSERVACIONES", margenDerecho-9, renglon-3)
       
       renglon+=5
-      pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Domicilio+"-"+unaGuia.Localidad, 90)[0], margenIzquierdo, renglon)
-      pdf.setFontSize(14).text(unaGuia.Remitos, margenDerecho, renglon)      
+      pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Observaciones, 45)[0], margenDerecho-10, renglon-4)
+      let indiceObservaciones=1
+      let renglonTemporal=renglon
+      while (indiceObservaciones<=4) {
+        renglonTemporal +=4
+        if (typeof pdf.splitTextToSize(unaGuia.Observaciones, 45)[indiceObservaciones] != "undefined") {
+          pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Observaciones, 45)[indiceObservaciones], margenDerecho-10, renglonTemporal-4)
+        }
+        indiceObservaciones++
+      }
+      pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Domicilio+"-"+unaGuia.Localidad, 60)[0], margenIzquierdo, renglon-4)
+      let indiceDom=1
+      let renglonTempDom=renglon
+      while (indiceDom<=4) {
+        renglonTempDom +=4
+        if (typeof pdf.splitTextToSize(unaGuia.Domicilio+"-"+unaGuia.Localidad, 60)[indiceDom] != "undefined") {
+          pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Domicilio+"-"+unaGuia.Localidad, 60)[indiceDom], margenIzquierdo, renglonTempDom-4)
+        }
+        indiceDom++
+      }      
       
       renglon+=5
       pdf.line(margenIzquierdo-paddingLineas, renglon, margenFinal+paddingLineas, renglon)
-      pdf.line(margenDerecho-paddingLineas, lineaSuperior, margenDerecho-paddingLineas, renglon)
+      pdf.line(margenDerecho-paddingLineas-10, lineaSuperior, margenDerecho-paddingLineas-10, renglon)
       const lineaIntermedia=renglon
 
       renglon +=7
+      //
       pdf.setFontSize(7).text("CONTRAREEMBOLSO", margenIzquierdo, renglon)
       pdf.setFontSize(7).text("BULTOS", margenCentral, renglon)
-      pdf.setFontSize(12).text("Guía: "+unaGuia.Comprobante, margenFinalBultos+2, renglon)
+      pdf.setFontSize(19).setFont(nombreFont, "Bold").text("Guía: "+unaGuia.Comprobante, margenFinalBultos+1, renglon)
 
       renglon += 5
+      //
       pdf.setFontSize(12).text("$ "+unaGuia.ContraReembolso.toFixed(2), margenIzquierdo, renglon)
       pdf.setFontSize(14).setFont(nombreFont, "Bold").text(unaGuia.Bultos+"", margenCentral+2, renglon).setFont(nombreFont, "")
-      pdf.setFontSize(10).text(pdf.splitTextToSize(unaGuia.NombreCliente, 60)[0], margenFinalBultos+2, renglon)
+      pdf.setFontSize(10).text(pdf.splitTextToSize(unaGuia.NombreCliente, 60)[0], margenFinalBultos+1, renglon+2)
       
       renglon +=5 //1
       //Linea horizontal debajo de contrareembolso
@@ -91,23 +112,26 @@ const guias= {
       
       renglon +=5
             
-      pdf.setFontSize(10).text("OBSERVACIONES", margenCentral, renglon)
-
-      renglon += 5
+      //pdf.setFontSize(10).text("OBSERVACIONES", margenCentral, renglon)
+      pdf.setFontSize(10).text('REMITO CLIENTE', margenCentral+3, renglon-1)
+      renglon += 3
       
-      pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Observaciones, 90)[0], margenCentral, renglon)
-      let indiceObservaciones=1
-      while (indiceObservaciones<=4) {
-        renglon +=4
-        if (typeof pdf.splitTextToSize(unaGuia.Observaciones, 90)[indiceObservaciones] != "undefined") {
-          pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Observaciones, 90)[indiceObservaciones], margenCentral, renglon)
+  
+      //pdf.setFontSize(8).text(pdf.splitTextToSize(unaGuia.Observaciones, 90)[0], margenCentral, renglon)
+      pdf.setFontSize(10).text(pdf.splitTextToSize(unaGuia.Remitos, 88)[0], margenCentral+3, renglon)  
+      let indiceRemitos=1
+      let renglonTemporal2=renglon
+      while (indiceRemitos<=4) {
+        renglonTemporal2 +=4
+        if (typeof pdf.splitTextToSize(unaGuia.Remitos, 88)[indiceRemitos] != "undefined") {
+          pdf.setFontSize(10).text(pdf.splitTextToSize(unaGuia.Remitos, 88)[indiceRemitos], margenCentral+3, renglonTemporal2)
         }
-        indiceObservaciones++
+        indiceRemitos++
       }
       
-      pdf.line(margenIzquierdo-paddingLineas, renglon, margenFinal+paddingLineas, renglon)
+      pdf.line(margenIzquierdo-paddingLineas, renglon+9, margenFinal+paddingLineas, renglon+9)
       
-      pdf.barcode(unaGuia.Comprobante, {fontSize: 40, x: margenIzquierdo-5, y: renglon-6})
+      pdf.barcode(unaGuia.Comprobante, {fontSize: 40, x: margenIzquierdo-5, y: renglon+6})
       pdf.setFont(nombreFont, "")
 
       if (indice<guias.length) {
@@ -261,6 +285,17 @@ const guias= {
         .catch(puteada => { reject(puteada) })
       }
     )            
+  },
+
+  async actualizarCalculoGuias(calculo,guiaId){
+    return new Promise (
+      function (resolve, reject) {
+        const Ruta=`/guia/actualizarCalculoGuias/${guiaId}`
+        API.acceder({Ruta, Cartel: "Actualizando guias", Metodo: "PATCH",Body: {Calculo: calculo}})
+        .then(data => { resolve(data) })
+        .catch(puteada => { reject(puteada) })
+      }
+    )  
   },
 
   async calcularValorizacion(id, tipo) {

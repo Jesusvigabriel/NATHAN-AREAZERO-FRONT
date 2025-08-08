@@ -731,6 +731,8 @@ import SelectorEmpresa from '@/components/SelectorEmpresa.vue'
 import IngresoValorConfiguracion from "@/components/IngresoValorConfiguracion.vue"
 import store from '@/store'
 import empresas from '@/store/empresasV3'
+import guias from "../../store/guias"
+import fechas from 'vue-lsi-util/fechas'
 
 export default {
     name: "EmpresasConfiguracion",
@@ -742,6 +744,7 @@ export default {
             keyComponent: 0,
             datosValidos: false,
             idEmpresa: null,
+            guiasEmpresa: [],
             configuracion: {},
             empresa: {},
             autogestionOpciones: [
@@ -781,29 +784,55 @@ export default {
         this.ocultarLoading()
       },
       registrarInformacion() {
-        this.validar()
+        let fechaActual = fechas.getHoy()
+        let mesActual = fechaActual.substring(5,7)
+        let añoActual = fechaActual.substring(0,4)
+        let inicioMes = añoActual + "-" + mesActual + "-01"
+        
+        guias.getByPeriodoIdEmpresa(inicioMes, fechaActual, this.idEmpresa)
+        .then(response=>{
+            this.guiasEmpresa = response
 
-        if (this.datosValidos) {
-          const payload={}
-          Object.assign(payload, this.configuracion)
-          for (const unAtributo of Object.entries(payload)) {
-            if (unAtributo[0]!="Id" && unAtributo[0]!="IdEmpresa" && unAtributo[0]!="UnificarGuias" && unAtributo[0]!="TipoCliente" && unAtributo[0]!="Direccion" && unAtributo[0]!="ContactoOficina" && unAtributo[0]!="ContactoDeposito") {
-              payload[unAtributo[0]]=unAtributo[1].Variable+"|"+String(unAtributo[1].Valor)+"|"+String(unAtributo[1].Minimo)+"|"+String(unAtributo[1].Activo)+"|"+String(unAtributo[1].Predeterminado)
+          this.validar()
+
+          if (this.datosValidos) {
+            const payload={}
+            Object.assign(payload, this.configuracion)
+            for (const unAtributo of Object.entries(payload)) {
+              if (unAtributo[0]!="Id" && unAtributo[0]!="IdEmpresa" && unAtributo[0]!="UnificarGuias" && unAtributo[0]!="TipoCliente" && unAtributo[0]!="Direccion" && unAtributo[0]!="ContactoOficina" && unAtributo[0]!="ContactoDeposito") {
+                payload[unAtributo[0]]=unAtributo[1].Variable+"|"+String(unAtributo[1].Valor)+"|"+String(unAtributo[1].Minimo)+"|"+String(unAtributo[1].Activo)+"|"+String(unAtributo[1].Predeterminado)
+              }
             }
-          }
-          payload.UnificarGuias=this.configuracion.UnificarGuias
-          // console.log(payload);
-          empresas.saveConfiguracion(this.idEmpresa, payload)
-            .then(response => {
-              empresas.saveConfiguracionHistorico(this.idEmpresa, payload)
-              //Aca llamo a mi funcion Historico
-              // console.log("Respuesta de API", response);
-              store.dispatch("alertDialog/mostrar", {titulo: "Registración exitosa", mensaje: "Los datos se han registrado exitosamente"})
-            })
-            .catch(error => {
-              console.log("Error en API", error);
-            })
-        }  
+            payload.UnificarGuias=this.configuracion.UnificarGuias
+            // console.log(payload);
+            empresas.saveConfiguracion(this.idEmpresa, payload)
+              .then(response => {
+                empresas.saveConfiguracionHistorico(this.idEmpresa, payload)
+                //actualizo las guias con los valores nuevos
+                this.guiasEmpresa.forEach(e=>{
+                  let concepto = e.DetalleCalculo.split(":")[1].trim()
+                  concepto = concepto.split(",")[0].trim()
+                  concepto = concepto.substring(1,concepto.length-5)
+                  
+                  guias.calcularValorizacion(e.IdOrden,concepto)
+                  .then(respuesta =>{
+                    for(const unCalculo of respuesta.Calculo){
+                      unCalculo.Concepto = concepto + unCalculo.Concepto
+                    }
+                    console.log(respuesta.Calculo)
+                    guias.actualizarCalculoGuias(respuesta.Calculo,e.Id)
+                  })
+                  store.dispatch("alertDialog/mostrar", {titulo: "Registración exitosa", mensaje: "Los datos se han registrado exitosamente"})
+                })
+                //Aca llamo a mi funcion Historico
+                // console.log("Respuesta de API", response);
+              })
+              .catch(error => {
+                console.log("Error en API", error);
+              })
+          }  
+        })
+        
       },
       eligioEmpresa(idEmpresaElegida) {
           this.idEmpresa=idEmpresaElegida;
@@ -846,6 +875,7 @@ export default {
 
 
       guardarDatosEmpresa(){
+        
         if(this.empresa.PART && this.empresa.LOTE){
           this.mostrarError("Los clientes no pueden tener contenedor y lote activos a la vez")
         }else{
