@@ -222,15 +222,27 @@
           <v-menu offset-y v-model="menuUsuario" :close-on-content-click="false">
             <template #activator="{ on, attrs }">
               <div class="d-flex align-center" style="cursor: pointer; height: 100%;" v-bind="attrs" v-on="on">
-                <perfil-icon class="mr-1" />
+                <v-icon class="mr-1">mdi-account</v-icon>
                 <span class="mr-1">{{ nombreUsuario }}</span>
               </div>
             </template>
             <v-list dense>
+              <!-- Opción de Mesa de Ayuda -->
+              <v-list-item 
+                @click="irAMesaDeAyuda" 
+                class="px-2"
+              >
+                <v-list-item-icon class="mr-2">
+                  <v-icon>mdi-help-circle</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Mesa de Ayuda</v-list-item-title>
+              </v-list-item>
+              <!-- Opción de Cerrar Sesión -->
               <v-list-item @click="cerrarSesion" class="px-2">
-                <v-list-item-title class="d-flex align-center">
-                  <logout-icon />
-                  <span>Cerrar Sesión</span>
+                <v-list-item-icon class="mr-2">
+                  <v-icon>mdi-logout</v-icon>
+                </v-list-item-icon>
+                <v-list-item-title>Cerrar Sesión</v-list-item-title>
                 </v-list-item-title>
               </v-list-item>
             </v-list>
@@ -283,6 +295,16 @@
           </v-expand-transition>
         </div>
         <v-divider></v-divider>
+        <!-- Mesa de Ayuda en el drawer -->
+        <div class="menu-item" @click="irAMesaDeAyuda">
+          <div class="menu-content">
+            <div class="menu-icon-wrapper">
+              <v-icon small class="mr-2">mdi-help-circle</v-icon>
+            </div>
+            <div class="menu-text">Mesa de Ayuda</div>
+          </div>
+        </div>
+
         <!-- Logout en el drawer -->
         <div class="menu-item" @click="cerrarSesion">
           <div class="menu-content">
@@ -508,6 +530,11 @@ export default {
         // Cerrar el menú de usuario
         this.menuUsuario = false;
       }
+    },
+    irAMesaDeAyuda() {
+      // Redirigir a la URL de la mesa de ayuda
+      console.log('Redirigiendo a la mesa de ayuda');
+      window.open('https://area54.sd.cloud.invgate.net/', '_blank');
     }
   },
   mounted() {

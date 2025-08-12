@@ -232,9 +232,16 @@ export default {
                     //Obtengo la configuracion de la empresa para saber si maneja stock Unitario.
                     await productosV3.getProductoByPartidaAndEmpresaAndProducto(this.IdEmpresa, unRegistro.NumeroPartida, this.BarcodeLeido)
                     .then(respuesta =>{
-                        this.Producto = respuesta
-                        this.Producto.Cantidad = unRegistro.Unidades 
-                        this.Producto.Comprobante = this.Comprobante
+                        // Combinar datos del backend con datos del Excel
+                        this.Producto = {
+                            ...respuesta,  // Datos del backend (Id, Descripcion, etc.)
+                            // Datos originales del Excel que necesitamos preservar
+                            NumeroPartida: unRegistro.NumeroPartida,
+                            BarcodeProducto: unRegistro.BarcodeProducto,
+                            Cantidad: unRegistro.Unidades,
+                            Comprobante: this.Comprobante
+                        }
+                        console.log('📋 Producto procesado del Excel:', this.Producto);
                         this.productosExistentes.push(this.Producto)
                     })
                     .catch(error => {
@@ -497,6 +504,48 @@ export default {
             }
         },
 
+        verificarColumnasExcelPartida(planilla) {
+            let columnasObligatorias = ['NumeroPartida', 'BarcodeProducto', 'Unidades']
+            let columnasFaltantes = []
+            let filaActual = 1
+            
+            planilla.forEach(unaFila => {
+                filaActual++
+                columnasObligatorias.forEach(unaColumnaObligatoria => {
+                    unaColumnaObligatoria = unaColumnaObligatoria.toUpperCase()
+                    const atributosDeLaFila = Object.keys(unaFila).map(e => e.toUpperCase())
+                    if (!atributosDeLaFila.includes(unaColumnaObligatoria)) {
+                        if (!columnasFaltantes.includes(unaColumnaObligatoria)) {
+                            columnasFaltantes.push(unaColumnaObligatoria)
+                        }
+                    }
+                })
+            })
+            
+            if (columnasFaltantes.length == 0) {
+                const titulo = "Confirma?"
+                const mensaje = "Confirma el procesamiento del Excel de partidas seleccionado?"
+                const botonPrimario = "Comenzar el procesamiento"
+                const botonSecundario = "No procesar"
+                store.dispatch(
+                    "alertDialog/mostrar", 
+                    {
+                        titulo, 
+                        mensaje, 
+                        botonPrimario, 
+                        botonSecundario, 
+                        callback: respuesta => {
+                            if (respuesta == botonPrimario) {
+                                this.procesarExcelLeido(planilla)
+                            }
+                        }
+                    }
+                )
+            } else {
+                this.mostrarMensaje("No se han detectado las siguientes columnas requeridas para partidas: " + columnasFaltantes, "Error")
+            }
+        },
+
         verificarColumnasExcelLote(planilla) {
             let columnasObligatorias=['BoxNumber']
             let columnasFaltantes=[]
@@ -548,6 +597,8 @@ export default {
                     const datosPlanilla=utils.sheet_to_json(planillaCruda.Sheets[nombreHoja1])
                     if(this.tieneLOTE){
                         this.verificarColumnasExcelLote(datosPlanilla)
+                    } else if(this.tienePART) {
+                        this.verificarColumnasExcelPartida(datosPlanilla)
                     } else {
                         this.verificarColumnasExcel(datosPlanilla)
                     }
@@ -642,25 +693,28 @@ export default {
                     //si hubo algun error al actualizar el stock se elimina el movimiento asignado
                     movimientosStockV3.eliminarMovimientoStock(idMovimiento)
                     this.listaCodigosLeidos.unshift({Barcode: part + " Barcode: " + barcode, Correcto: false, Descripcion: 'Ingreso Fallido'})
-                })                         
+                })
         },
 
         registrarIngresoStockPartida(){
             store.dispatch('loading/mostrar', {titulo: 'Registrando...'})
+
             for (const unProducto of this.productosExistentes){
-                const cabeceraDatos = {'Partida': unProducto[0].Partida, 
-                                       'Barcode': unProducto[0].Barcode, 
+                const cabeceraDatos = {'Barcode': unProducto.BarcodeProducto, 
                                        'IdEmpresa': this.IdEmpresa, 
                                        'Cantidad': unProducto.Cantidad,
                                        'Comprobante': unProducto.Comprobante,
                                        'Fecha': this.Fecha,
+                                       'Partida': unProducto.NumeroPartida  
                 }
+
                 this.listaEnvioMail.push({
-                    Partida: unProducto.numeroPartida, 
+                    Barcode: unProducto.BarcodeProducto, 
                     Cantidad: unProducto.Cantidad, 
                     Fecha: this.Fecha, 
-                    IdEmpresa: unProducto.IdEmpresa, 
-                    Comprobante: unProducto.Comprobante})
+                    IdEmpresa: this.IdEmpresa, 
+                    Comprobante: unProducto.Comprobante,
+                    Partida: unProducto.NumeroPartida})
                     
                     //obtiene la hora en la que se hizo el movimiento
                     const fechaHoy = new Date()
@@ -672,23 +726,81 @@ export default {
                     
                     let fechaGuardar = this.fechaToString(fechas.getSumarDiasFecha(0, new Date(this.fechaGuardar)))
 
-                    movimientosStockV3.createMovimientoStock({
-                        Orden: cabeceraDatos.Comprobante,
-                        IdProducto: unProducto[0].Id, //es el id de partida
-                        Unidades: cabeceraDatos.Cantidad,
-                        Tipo: 0,
+                    movimientosStockV3.createMovimientoStockPartida({
                         IdEmpresa: parseInt(cabeceraDatos.IdEmpresa),
-                        Fecha: fechaGuardar.toString(), 
-                        codprod: cabeceraDatos.Partida.toString().trim(), 
-                        Usuario: this.userName })
+                        Barcode: cabeceraDatos.Barcode.toString().trim(),
+                        NumeroPartida: cabeceraDatos.Partida.toString().trim(),
+                        Cantidad: parseInt(cabeceraDatos.Cantidad),
+                        Usuario: this.userName,
+                        Fecha: fechaGuardar.toString()
+                    })
                     .then(response => {
-                        this.actualizaStockPart(cabeceraDatos.Partida, cabeceraDatos.Barcode, parseInt(cabeceraDatos.Cantidad),response.Id)
-                     })
-                     .catch(error => { 
-                        store.dispatch('snackbar/mostrar', error)
-                        this.listaCodigosLeidos.unshift({Barcode: unProducto.Barcode, Correcto: false, Descripcion: 'Comprobante duplicado'})
-                     }) 
-                     fechaGuardar =""
+                        // NUEVO CONTRATO: response es directamente response.data del backend
+                        console.log(`📝 THEN ejecutado para ${cabeceraDatos.Barcode} - ${cabeceraDatos.Partida}`);
+                        console.log('Respuesta recibida (response.data):', response);
+                        
+                        // El helper ya maneja los errores, si llegamos aquí es éxito
+                        console.log(`✅ Producto ${cabeceraDatos.Barcode} - Partida ${cabeceraDatos.Partida} ingresado exitosamente`);
+                        
+                        // Obtener mensaje de éxito del backend
+                        const mensajeExito = response?.mensaje || `Ingreso exitoso: ${cabeceraDatos.Cantidad} unidades`;
+                        console.log('💬 Mensaje de éxito:', mensajeExito);
+                        
+                        // Mostrar mensaje de éxito en la UI
+                        this.listaCodigosLeidos.unshift({
+                            Barcode: `${cabeceraDatos.Partida} - ${cabeceraDatos.Barcode}`, 
+                            Correcto: true, 
+                            Descripcion: mensajeExito
+                        });
+                        console.log('📋 Lista actualizada:', this.listaCodigosLeidos.length, 'elementos');
+                        
+                        // Mostrar snackbar de éxito
+                        console.log('📢 Enviando snackbar:', `✅ ${mensajeExito}`);
+                        store.dispatch('snackbar/mostrar', `✅ ${mensajeExito}`);
+                        
+                        // ✅ El backend ya actualizó el stock automáticamente
+                        // No necesitamos llamar a actualizaStock() aquí
+                        console.log('✅ Stock actualizado por el backend automáticamente');
+                        console.log('📊 Nuevo stock:', response?.data?.partida?.Stock);
+                        console.log('🆔 Movimiento creado con ID:', response?.data?.movimiento?.Id);
+                    })
+                    .catch(error => { 
+                        console.log(`🔴 CATCH ejecutado para ${cabeceraDatos.Barcode} - ${cabeceraDatos.Partida}`);
+                        console.log('Error recibido:', error);
+                        
+                        let errorMsg = 'Error desconocido';
+                        let descripcionError = 'Error en ingreso';
+                        
+                        // NUEVO CONTRATO: Diferenciar tipos de error
+                        if (error?.type === 'BUSINESS_ERROR') {
+                            // Error de negocio del backend (ej: PRODUCTO_NO_EXISTE)
+                            errorMsg = error.message;
+                            descripcionError = errorMsg;
+                            console.log(`❌ Error de negocio: ${error.error} - ${errorMsg}`);
+                        } else if (error?.type === 'TECHNICAL_ERROR') {
+                            // Error técnico (HTTP, red, etc.)
+                            errorMsg = 'Error técnico en la comunicación';
+                            descripcionError = 'Error de conexión';
+                            console.log(`❌ Error técnico: Status ${error.status}`);
+                        } else {
+                            // Error legacy o desconocido
+                            errorMsg = error?.message || 'Error desconocido';
+                            descripcionError = errorMsg;
+                            console.log(`❌ Error legacy: ${errorMsg}`);
+                        }
+
+                        console.log('📢 Enviando snackbar de error:', `❌ ${descripcionError}`);
+                        store.dispatch('snackbar/mostrar', `❌ ${descripcionError}`);
+                        
+                        console.log('📋 Agregando a lista de errores');
+                        this.listaCodigosLeidos.unshift({
+                            Barcode: `${cabeceraDatos.Partida} - ${cabeceraDatos.Barcode}`, 
+                            Correcto: false, 
+                            Descripcion: descripcionError
+                        });
+                        console.log('📋 Lista actualizada con error:', this.listaCodigosLeidos.length, 'elementos');
+                    }) 
+                     fechaGuardar = "";
             }
 
             this.productosExistentes = []
