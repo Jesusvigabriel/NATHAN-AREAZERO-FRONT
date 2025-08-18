@@ -775,13 +775,19 @@ export default {
         return
       }
       
+      if (!this.selectedEmpresa) {
+        this.$toast.error('Debe seleccionar una empresa')
+        return
+      }
+      
       this.savingTemplate = true
       
       try {
         // Preparar los datos según el formato esperado por la API
         const templateData = {
           ...this.template,
-          Cuerpo: this.template.Cuerpo || ''
+          Cuerpo: this.template.Cuerpo || '',
+          IdEmpresa: this.selectedEmpresa
         }
         
         // Guardar la plantilla

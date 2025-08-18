@@ -112,13 +112,14 @@ const emailTemplates = {
         const logPrefix = `[emailTemplates] [${isUpdate ? 'update' : 'create'}]`;
         console.group(logPrefix);
         try {
-            const url = `/emailTemplates${isUpdate ? `/${template.Id}` : ''}`;
+            const url = `/emailTemplates/${template.IdEmpresa}${isUpdate ? `/${template.Id}` : ''}`;
             const method = isUpdate ? 'PATCH' : 'POST';
             const requestData = {
                 Tipo: template.Tipo,
                 Titulo: template.Titulo,
                 Cuerpo: template.Cuerpo,
-                Activo: template.Activo !== false
+                Activo: template.Activo !== false,
+                IdEmpresa: template.IdEmpresa
             };
             
             console.log(`${logPrefix} ${method}:`, url);
