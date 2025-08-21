@@ -549,7 +549,7 @@ export default {
         async popularListaProductos() {
             console.log(this.tienePART)
             console.log(this.tienePART&&!this.tieneLOTE)
-            if(!this.tieneLOTE&&!this.tienePART){
+            if(!this.tieneLOTE){
                 productosV3.getAllProductosByEmpresa(this.idEmpresa)
                 .then(respuesta => {
                     this.listaArticulos=respuesta
@@ -559,17 +559,17 @@ export default {
                     this.listaArticulos=[]
                     this.mostrarError(puteada)
                 })
-            }else if(this.tienePART&&!this.tieneLOTE){
-                console.log("tienepart")
-                productosV3.getAllPartidasByIdEmpresa(this.idEmpresa)
-                .then(respuesta => {
-                    this.listaArticulos=respuesta
-                    console.log(respuesta)
-                })
-                .catch(puteada => {
-                    this.listaArticulos=[]
-                    this.mostrarError(puteada)
-                })
+            //}else if(this.tienePART&&!this.tieneLOTE){
+              //  console.log("tienepart")
+                //productosV3.getAllPartidasByIdEmpresa(this.idEmpresa)
+                //.then(respuesta => {
+                  //  this.listaArticulos=respuesta
+                   // console.log(respuesta)
+                //})
+                //.catch(puteada => {
+                  //  this.listaArticulos=[]
+                    //this.mostrarError(puteada)
+                //})
             }else{
                 productosV3.getAllLotesSoloDetalle(this.idEmpresa)
                 .then(respuesta => {
