@@ -732,7 +732,8 @@ export default {
                         NumeroPartida: cabeceraDatos.Partida.toString().trim(),
                         Cantidad: parseInt(cabeceraDatos.Cantidad),
                         Usuario: this.userName,
-                        Fecha: fechaGuardar.toString()
+                        Fecha: fechaGuardar.toString(),
+                        Comprobante: cabeceraDatos.Comprobante // <--- AGREGADO
                     })
                     .then(response => {
                         // NUEVO CONTRATO: response es directamente response.data del backend
