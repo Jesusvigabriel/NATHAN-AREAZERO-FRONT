@@ -471,6 +471,28 @@ export default {
           // Comprobación para el módulo de seguimientos (si viene del backend para algunos roles)
           else if (m.modulo.includes('seguimientos')) this.ListaDeMenusSeguimientos.push(m);
         });
+
+        if (this.ListaDeMenusSeguridad.length > 0) {
+          this.ListaDeMenusSeguridad.push({
+            nombre: 'Categorías',
+            ruta: '/admin/categorias',
+            modulo: 'seguridad'
+          });
+        }
+
+        // Add the new Occupancy Dashboard to the Informes menu if it exists
+        if (this.ListaDeMenusInformes.length > 0) {
+          this.ListaDeMenusInformes.unshift({
+            nombre: 'Mapa de Calor',
+            ruta: '/dashboard/heatmap',
+            modulo: 'informes'
+          });
+          this.ListaDeMenusInformes.unshift({
+            nombre: 'Dashboard de Ocupación',
+            ruta: '/dashboard/ocupacion',
+            modulo: 'informes'
+          });
+        }
         
         // El menú "Panel de Seguimientos" ahora viene dinámicamente del backend
         // Ya no es necesario agregarlo manualmente
