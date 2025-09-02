@@ -1100,11 +1100,10 @@ export default {
 
     subirExcelAS3(excelASubir) {
         var AWS = require('aws-sdk');
-        const credentials = new AWS.Credentials('REDACTED_AWS_ACCESS_KEY_ID', 'REDACTED_AWS_SECRET_ACCESS_KEY')
+        const credentials = new AWS.Credentials(process.env.VUE_APP_AWS_ACCESS_KEY_ID, process.env.VUE_APP_AWS_SECRET_ACCESS_KEY)
         var s3 = new AWS.S3({credentials})
 
-        // const nombreArchivo=`logistica-${this.fechaDesde}-al-${this.fechaHasta}-${this.hashExcel}.xlsx`
-        const nombreArchivo=`informe-${this.hashExcel}.xlsx`
+          const nombreArchivo=`informe-${this.hashExcel}.xlsx`
 
         var params = {Bucket: "a54-informes-facturacion", Key: nombreArchivo, Body: excelASubir, ContentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"};
         this.mostrarLoading("Subiendo informe a S3...")
