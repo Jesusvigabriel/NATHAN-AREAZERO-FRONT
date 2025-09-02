@@ -330,6 +330,87 @@ const posicionesV3= {
         return pdf
       }
 
+    // --- New methods for volumetric control ---
+
+    async getPosicionesConCapacidad() {
+        return API.acceder({ Ruta: '/posiciones', Cartel: "Obteniendo posiciones..." });
+    },
+
+    async getPosicionById(id) {
+        return API.acceder({ Ruta: `/posiciones/byId/${id}`, Cartel: "Cargando posición..." });
+    },
+
+    async createPosicion(payload) {
+        return API.acceder({
+            Ruta: '/posiciones/newOne',
+            Metodo: 'POST',
+            Body: payload,
+            Cartel: "Creando posición..."
+        });
+    },
+
+    async updatePosicion(id, payload) {
+        return API.acceder({
+            Ruta: `/posiciones/${id}`,
+            Metodo: 'PUT',
+            Body: payload,
+            Cartel: "Actualizando posición..."
+        });
+    },
+
+    async getOcupacion(empresa, zona) {
+        let ruta = '/posiciones/ocupacion';
+        const params = new URLSearchParams();
+        if (empresa) params.append('empresa', empresa);
+        if (zona) params.append('zona', zona);
+        if (params.toString()) ruta += `?${params.toString()}`;
+        return API.acceder({ Ruta: ruta, Cartel: "Calculando ocupación..." });
+    },
+
+    async getOcupacionDetalle(id, empresa, zona) {
+        let ruta = `/posiciones/${id}/ocupacion`;
+        const params = new URLSearchParams();
+        if (empresa) params.append('empresa', empresa);
+        if (zona) params.append('zona', zona);
+        if (params.toString()) ruta += `?${params.toString()}`;
+        return API.acceder({ Ruta: ruta, Cartel: "Obteniendo detalle de ocupación..." });
+    },
+
+    async getHeatmap(empresa, periodo, zona) {
+        let ruta = '/posiciones/heatmap';
+        const params = new URLSearchParams();
+        if (empresa) params.append('empresa', empresa);
+        if (periodo) params.append('periodo', periodo);
+        if (zona) params.append('zona', zona);
+        if (params.toString()) ruta += `?${params.toString()}`;
+        return API.acceder({ Ruta: ruta, Cartel: "Generando mapa de calor..." });
+    },
+
+    // --- Generic CRUD for new entities ---
+
+    categorias: {
+        getAll() { return API.acceder({ Ruta: '/categorias' }); },
+        getById(id) { return API.acceder({ Ruta: `/categorias/${id}` }); },
+        create(payload) { return API.acceder({ Ruta: '/categorias', Metodo: 'POST', Body: payload }); },
+        update(id, payload) { return API.acceder({ Ruta: `/categorias/${id}`, Metodo: 'PUT', Body: payload }); },
+        delete(id) { return API.acceder({ Ruta: `/categorias/${id}`, Metodo: 'DELETE' }); },
+    },
+
+    palletTipos: {
+        getAll() { return API.acceder({ Ruta: '/palletTipos' }); },
+        getById(id) { return API.acceder({ Ruta: `/palletTipos/${id}` }); },
+        create(payload) { return API.acceder({ Ruta: '/palletTipos', Metodo: 'POST', Body: payload }); },
+        update(id, payload) { return API.acceder({ Ruta: `/palletTipos/${id}`, Metodo: 'PUT', Body: payload }); },
+        delete(id) { return API.acceder({ Ruta: `/palletTipos/${id}`, Metodo: 'DELETE' }); },
+    },
+
+    pallets: {
+        getAll() { return API.acceder({ Ruta: '/pallets' }); },
+        getById(id) { return API.acceder({ Ruta: `/pallets/${id}` }); },
+        create(payload) { return API.acceder({ Ruta: '/pallets', Metodo: 'POST', Body: payload }); },
+        update(id, payload) { return API.acceder({ Ruta: `/pallets/${id}`, Metodo: 'PUT', Body: payload }); },
+        delete(id) { return API.acceder({ Ruta: `/pallets/${id}`, Metodo: 'DELETE' }); },
+    }
 }
 
 export default posicionesV3

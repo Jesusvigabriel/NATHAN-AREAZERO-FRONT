@@ -78,6 +78,13 @@
                 <v-icon color="green" v-show="barcodePosicionDestino.correcto">mdi-checkbox-marked-circle-outline</v-icon>
                 <v-icon color="red" v-show="barcodePosicionDestino.incorrecto">mdi-alert-circle-outline</v-icon>
             </v-col>
+             <v-col cols="12" md="4" v-if="posicionDestinoOcupacion">
+                 <v-alert dense outlined type="info">
+                    Disponible:
+                    <strong>{{ (posicionDestinoOcupacion.capacidadPesoKg - posicionDestinoOcupacion.pesoOcupadoKg).toFixed(2) }} Kg</strong>,
+                    <strong>{{ (posicionDestinoOcupacion.capacidadVolumenCm3 - posicionDestinoOcupacion.volumenOcupadoCm3).toFixed(2) }} cm³</strong>
+                </v-alert>
+            </v-col>
         </v-row>
         <v-row justify="center" v-if="barcodePosicionOrigen.correcto" class="my-0 py-0">
             <v-col cols="12" md="6" class="my-0 py-0">
@@ -101,6 +108,7 @@
                     @keypress.enter="procesarCantidad" 
                     label="Cantidad"  
                     v-model="cantidad"
+                    :error-messages="capacityErrorMessages"
                     dense 
                     id="CantidadAIngresar" 
                     class="my-0 py-0"
@@ -188,6 +196,31 @@ export default {
             listaCodigosFallidos: [],
             userName: null,
             tipoCodigo:null,
+            posicionDestinoOcupacion: null,
+            articuloActual: null,
+        }
+    },
+
+    computed: {
+        capacityErrorMessages() {
+            if (!this.articuloActual || !this.posicionDestinoOcupacion || !this.cantidad) {
+                return [];
+            }
+
+            const errors = [];
+            const requiredWeight = (this.articuloActual.pesoKg || 0) * this.cantidad;
+            const requiredVolume = (this.articuloActual.volumenCm3 || 0) * this.cantidad;
+            const availableWeight = this.posicionDestinoOcupacion.capacidadPesoKg - this.posicionDestinoOcupacion.pesoOcupadoKg;
+            const availableVolume = this.posicionDestinoOcupacion.capacidadVolumenCm3 - this.posicionDestinoOcupacion.volumenOcupadoCm3;
+
+            if (requiredWeight > availableWeight) {
+                errors.push(`Peso excede la capacidad (${requiredWeight.toFixed(2)} > ${availableWeight.toFixed(2)} Kg)`);
+            }
+            if (requiredVolume > availableVolume) {
+                errors.push(`Volumen excede la capacidad (${requiredVolume.toFixed(2)} > ${availableVolume.toFixed(2)} cm³)`);
+            }
+
+            return errors;
         }
     },
 
@@ -304,6 +337,16 @@ export default {
             }
         },
         async procesarBarcodeArticulo() {
+            this.articuloActual = null;
+            try {
+                // Fetch product details to get its dimensions
+                this.articuloActual = await productos.getByBarcodeAndEmpresa(this.barcodeArticulo, this.idEmpresa);
+            } catch (error) {
+                this.mostrarError("Artículo no encontrado.");
+                this.barcodeArticulo = "";
+                return;
+            }
+
             if(this.tieneLOTE == true){
                 this.cantidadArticulos.mostrar=false
                 this.cantidad = 1
@@ -325,6 +368,7 @@ export default {
                         {
                             productos.getByBarcodeAndEmpresa(barcodeProducto.trim(), this.idEmpresa)
                             .then(respuesta => {
+                                this.articuloActual = respuesta; // Store for validation
                                 for(const articulos of respuesta.Posiciones){
                                     if(articulos.Nombre == this.barcodePosicionOrigen.dato){
                                         contadorBucle =0
@@ -378,10 +422,7 @@ export default {
                 
             }else if(this.manejaStockUnitario==true){
                 this.cantidad = 1
-                this.listaBarcodesArticulos.push([this.barcodeArticulo,  this.cantidad])
-                this.barcodeArticulo=""
-                this.barcodePosicionDestino.mostrar=true
-                this.enfocarBarcodePosicionDestino()
+                this.procesarCantidad(); // Go to validation
             }else{
                 this.cantidadArticulos.mostrar=true
                 this.enfocarCantidadArticulo()
@@ -391,14 +432,19 @@ export default {
             if(!this.barcodeArticulo || !this.cantidad || this.cantidad<1){
                 const mensajeError = {titulo: "Error", mensaje:"Los campos de barcode y posicion no pueden estar vacios"}
                 store.dispatch("alertDialog/mostrar", mensajeError)
-            }else{
-
-                this.listaBarcodesArticulos.push([this.barcodeArticulo,  this.cantidad])
-                this.barcodeArticulo=""
-                this.cantidad=""
-                this.barcodePosicionDestino.mostrar=true
-                this.enfocarBarcodePosicionDestino()
+                return;
             }
+            if (this.capacityErrorMessages.length > 0) {
+                this.mostrarError("La cantidad excede la capacidad de la posición de destino.");
+                return;
+            }
+
+            this.listaBarcodesArticulos.push([this.barcodeArticulo,  this.cantidad])
+            this.barcodeArticulo=""
+            this.cantidad=""
+            this.articuloActual = null; // Reset for next item
+            this.barcodePosicionDestino.mostrar=true
+            this.enfocarBarcodePosicionDestino()
         },
         eliminarLectura(item, index) {
             if(this.tieneLOTE== true){
@@ -418,6 +464,7 @@ export default {
             this.listaArticulosOK=[]
             this.listaCodigosLeidos=[]
             this.listaCodigosFallidos=[]
+            this.posicionDestinoOcupacion = null;
             empresas.getOneById(this.idEmpresa)
             .then(respuesta => {
                 if(respuesta.LOTE == true){
@@ -443,6 +490,7 @@ export default {
             this.enfocarBarcodePosicionOrigen()
         },
         procesarBarcodePosicionOrigen() {
+            this.posicionDestinoOcupacion = null;
             posiciones.getByNombre(this.barcodePosicionOrigen.dato)
                 .then(respuesta => {
                     this.posicionOrigen=respuesta
@@ -462,26 +510,31 @@ export default {
                     this.enfocarBarcodePosicionOrigen()
                 })
         },
-        procesarBarcodePosicionDestino() {
-            if (this.barcodePosicionOrigen.dato != this.barcodePosicionDestino.dato) {
-                posiciones.getByNombre(this.barcodePosicionDestino.dato)
-                    .then(respuesta => {
-                        this.posicionDestino=respuesta
-                        this.barcodePosicionDestino.correcto=true
-                        this.barcodePosicionDestino.incorrecto=false
-                        this.enfocarBarcodeArticulo()
-                    })
-                    .catch(puteada => {
-                        this.barcodePosicionDestino.incorrecto=true
-                        this.barcodePosicionDestino.correcto=false
-                        this.enfocarBarcodePosicionDestino()
-                    })
-            } else {
+        async procesarBarcodePosicionDestino() {
+            this.posicionDestinoOcupacion = null;
+            if (this.barcodePosicionOrigen.dato === this.barcodePosicionDestino.dato) {
                 this.mostrarError("La posición de destino no puede ser igual a la de origen")
                 this.barcodePosicionDestino.incorrecto=true
                 this.barcodePosicionDestino.correcto=false
                 this.enfocarBarcodePosicionDestino()
+                return;
+            }
 
+            try {
+                const respuesta = await posiciones.getByNombre(this.barcodePosicionDestino.dato);
+                this.posicionDestino = respuesta;
+                this.barcodePosicionDestino.correcto = true;
+                this.barcodePosicionDestino.incorrecto = false;
+                this.enfocarBarcodeArticulo();
+
+                // Fetch occupancy details
+                this.posicionDestinoOcupacion = await posicionesV3.getOcupacionDetalle(respuesta.Id, this.idEmpresa);
+
+            } catch (error) {
+                this.mostrarError("Posición de destino inexistente o sin datos de capacidad.");
+                this.barcodePosicionDestino.incorrecto = true;
+                this.barcodePosicionDestino.correcto = false;
+                this.enfocarBarcodePosicionDestino();
             }
         },
         enfocarBarcodePosicionOrigen() {

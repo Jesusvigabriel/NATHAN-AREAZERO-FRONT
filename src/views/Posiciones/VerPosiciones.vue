@@ -44,28 +44,78 @@
             :search="textoBusqueda"
             class="elevation-3" 
         >
+        <template v-slot:item.ocupacionPeso="{ item }">
+          <v-progress-linear
+            :value="(item.pesoOcupadoKg / item.capacidadPesoKg) * 100 || 0"
+            :color="getOcupacionColor((item.pesoOcupadoKg / item.capacidadPesoKg) * 100 || 0)"
+            height="20"
+            striped
+          >
+            <small>{{ Math.round((item.pesoOcupadoKg / item.capacidadPesoKg) * 100 || 0) }}%</small>
+          </v-progress-linear>
+        </template>
+        <template v-slot:item.ocupacionVolumen="{ item }">
+          <v-progress-linear
+            :value="(item.volumenOcupadoCm3 / item.capacidadVolumenCm3) * 100 || 0"
+            :color="getOcupacionColor((item.volumenOcupadoCm3 / item.capacidadVolumenCm3) * 100 || 0)"
+            height="20"
+            striped
+          >
+            <small>{{ Math.round((item.volumenOcupadoCm3 / item.capacidadVolumenCm3) * 100 || 0) }}%</small>
+          </v-progress-linear>
+        </template>
         <template v-slot:item.Estado="{item}">
           <div class="acciones-flex">
-            <v-chip dark :color="getColorIconoEstado(item)" @click="clickEnVerContenido(item)"><v-icon>{{getIconoEstado(item)}}</v-icon></v-chip>
+            <v-chip dark color="blue" @click="editarPosicion(item)" class="mx-1"><v-icon>mdi-pencil</v-icon></v-chip>
+            <v-chip dark :color="getColorIconoEstado(item)" @click="clickEnVerContenido(item)"><v-icon>mdi-magnify</v-icon></v-chip>
             <v-chip dark color="error" @click="clickEnEliminarPosicion(item)" class="mx-1"><v-icon>mdi-delete-outline</v-icon></v-chip>
             <v-chip dark color="success" @click="imprimirSticker(item)" class="mx-1"><v-icon>mdi-sticker-text-outline</v-icon></v-chip>
           </div>
         </template>
         </v-data-table>
       </v-col>
-    </v-row>
+    </row>
 
     <v-dialog v-model="mostrarVentanaEdicion" persistent max-width="800px">
       <v-card class="rounded-card">
           <v-card-title>
-              <span class="text-h5">Creación de nueva posición</span>
+              <span class="text-h5">{{ formTitle }}</span>
           </v-card-title>
           <v-card-text>
               <v-form >
                   <v-container>
                       <v-row>
-                          <v-col>
-                              <v-text-field label="Nombre" v-model="nombreNuevaPosicion"></v-text-field>
+                          <v-col cols="12" sm="6">
+                              <v-text-field label="Nombre" v-model="editedItem.nombre" :rules="[rules.required]"></v-text-field>
+                          </v-col>
+                          <v-col cols="12" sm="6">
+                              <v-select
+                                  label="Categoría Permitida"
+                                  v-model="editedItem.categoriaPermitidaId"
+                                  :items="listaCategorias"
+                                  item-text="nombre"
+                                  item-value="id"
+                                  clearable
+                              ></v-select>
+                          </v-col>
+                      </v-row>
+                      <v-row>
+                          <v-col cols="12" sm="6" md="3">
+                              <v-text-field type="number" label="Capacidad Peso (Kg)" v-model.number="editedItem.capacidadPesoKg"></v-text-field>
+                          </v-col>
+                          <v-col cols="12" sm="6" md="3">
+                              <v-text-field type="number" label="Capacidad Volumen (cm³)" v-model.number="editedItem.capacidadVolumenCm3"></v-text-field>
+                          </v-col>
+                           <v-col cols="12" sm="6" md="3">
+                              <v-text-field type="number" label="Factor Desperdicio (%)" v-model.number="editedItem.factorDesperdicio"></v-text-field>
+                          </v-col>
+                      </v-row>
+                      <v-row>
+                          <v-col cols="12" sm="6" md="4">
+                              <v-text-field type="number" label="Coordenada X" v-model.number="editedItem.coordX"></v-text-field>
+                          </v-col>
+                          <v-col cols="12" sm="6" md="4">
+                              <v-text-field type="number" label="Coordenada Y" v-model.number="editedItem.coordY"></v-text-field>
                           </v-col>
                       </v-row>
                   </v-container>
@@ -132,8 +182,8 @@
 <script>
 
 import store from '@/store'
-import posiciones from '@/store/posiciones'
-import posicion from '@/store/posicionesV3'
+// import posiciones from '@/store/posiciones' // Old API
+import posicion from '@/store/posicionesV3' // New API (aliased as posicion)
 import productos from '@/store/productosV3'
 import {xlsx, read, utils} from 'xlsx'
 import excel from "exceljs"
@@ -151,14 +201,38 @@ export default {
       detallePosicionesContenido: [],
       listaPosicionesExcel: [],
       posicionSeleccionada: {},
-      nombreNuevaPosicion: '',
       mostrarVentanaEdicion: false,
       listaPosiciones: [],
+      listaCategorias: [],
+      editedIndex: -1,
+      editedItem: {
+        nombre: '',
+        capacidadPesoKg: 0,
+        capacidadVolumenCm3: 0,
+        factorDesperdicio: 0,
+        categoriaPermitidaId: null,
+        coordX: 0,
+        coordY: 0,
+      },
+      defaultItem: {
+        nombre: '',
+        capacidadPesoKg: 0,
+        capacidadVolumenCm3: 0,
+        factorDesperdicio: 0,
+        categoriaPermitidaId: null,
+        coordX: 0,
+        coordY: 0,
+      },
+      rules: {
+        required: value => !!value || 'Este campo es requerido.',
+      },
       cabecerasPosiciones: [
-          {text: 'Posición', value: 'Nombre', sortable: true},
+          {text: 'Posición', value: 'nombre', sortable: true},
+          {text: 'Ocupación Peso', value: 'ocupacionPeso', sortable: false, width: '150px'},
+          {text: 'Ocupación Volumen', value: 'ocupacionVolumen', sortable: false, width: '150px'},
           {text: 'Fecha inventario', value: 'FechaInventario', sortable: true},
           {text: 'Usuario', value: 'UsuarioInventario', sortable: true},
-          {text: '', value: 'Estado', sortable: true, width: '140px'},
+          {text: '', value: 'Estado', sortable: false, width: '200px'},
       ],
       cabecerasDetallePosiciones: [
           {text: 'Id', value: 'IdProducto'},
@@ -177,17 +251,27 @@ export default {
     }
   },
 
+  computed: {
+    formTitle() {
+      return this.editedIndex === -1 ? 'Crear Nueva Posición' : 'Editar Posición'
+    },
+  },
+
   methods: {
+    async fetchCategorias() {
+      try {
+        this.listaCategorias = await posicion.categorias.getAll();
+      } catch (error) {
+        this.mostrarError('No se pudieron cargar las categorías.');
+      }
+    },
 
     actualizaFechaPosicion(items){
-
       this.fechaMayor = '2030-01-01 16:11:11'
       this.editFechaPosicion(items[0].posicionId,this.fechaMayor)
-      
     },
 
     clickEnVaciarItemDePosicion(item) {
-
       const textoPrimario="Si, desposicionar el item"
       const textoSecundario="Cancelar"
       const ad={
@@ -203,15 +287,14 @@ export default {
       }
       store.dispatch("alertDialog/mostrar", ad)
     },
-    async VaciarItemDePosicionConfirmado(posicion, item) {
+    async VaciarItemDePosicionConfirmado(posicionSeleccionada, item) {
       try {
-        const result=await productos.registrarDesposicionamiento(item.IdProducto, posicion.Id, item.Unidades)
+        await productos.registrarDesposicionamiento(item.IdProducto, posicionSeleccionada.Id, item.Unidades)
       } catch (error) {
-        console.log("Error", error)
+        this.mostrarError(error)
       }
       this.mostrarDetallePosiciones=false
       await this.popularListaPosiciones()
-
     },    
     cerrarDetallePosiciones() {
       this.mostrarDetallePosiciones=false
@@ -223,7 +306,6 @@ export default {
     },
 
     clickEnEliminarPosicion(item) {
-      console.log('>> clickEnEliminarPosicion:', item.Id);
       const textoPrimario="Si, borrarla"
       const textoSecundario="No borrarla"
       const ad={
@@ -237,104 +319,77 @@ export default {
           }
         })
       }
-      console.log('>> dispatch alertDialog/mostrar con payload:', ad);
       store.dispatch("alertDialog/mostrar", ad)
     },
     async eliminarPosicion(item) {
-      console.log("Item a eliminar", item.Id)
-
       try {
-
-        const contenidoPosicion = await posiciones.getContent(item.Id)
-        //console.log(contenidoPosicion)
-        if(contenidoPosicion.length>0){
-          this.mostrarMensaje("Ha ocurrido un error", "Debe vaciar la posicion antes de Eliminarla")
+        const contenidoPosicion = await posicion.getContent(item.Id)
+        if(contenidoPosicion.length > 0){
+          this.mostrarMensaje("Error", "Debe vaciar la posición antes de eliminarla.")
         }else{
-          const result=await posiciones.eliminar(item.Id)
+          await posicion.eliminar(item.Id) // Assuming `posicion` has `eliminar`
+          this.popularListaPosiciones()
         }
-        
-        this.popularListaPosiciones()
       } catch (error) {
-        console.log("Error", error)
+        this.mostrarError(error)
       }
     },
+
     crearPosicion() {
-      this.nombreNuevaPosicion=''
-      this.mostrarVentanaEdicion=true
+      this.editedItem = Object.assign({}, this.defaultItem)
+      this.editedIndex = -1
+      this.mostrarVentanaEdicion = true
     },
+
+    editarPosicion(item) {
+      this.editedIndex = this.listaPosiciones.indexOf(item)
+      this.editedItem = Object.assign({}, item)
+      this.mostrarVentanaEdicion = true
+    },
+
     cancelarEdicion() {
-      this.mostrarVentanaEdicion=false
+      this.mostrarVentanaEdicion = false
+      this.$nextTick(() => {
+        this.editedItem = Object.assign({}, this.defaultItem)
+        this.editedIndex = -1
+      })
     },
+
     async confirmarEdicion() {
-      if (this.nombreNuevaPosicion!=='') {
+      if (this.editedItem.nombre) {
         try {
-          const result=await posiciones.nueva(this.nombreNuevaPosicion)
-          // console.log(result)
+          if (this.editedIndex > -1) {
+            // Update
+            await posicion.updatePosicion(this.editedItem.Id, this.editedItem)
+          } else {
+            // Create
+            await posicion.createPosicion(this.editedItem)
+          }
           this.popularListaPosiciones()
         } catch (error) {
-          console.log("Error", error)
-          this.mostrarMensaje("Ha ocurrido un error", error)
+          this.mostrarError(error)
         }
+        this.cancelarEdicion()
       } else {
-        this.mostrarMensaje("Ha ocurrido un error", "El nombre de la nueva posición no puede estar vacío")
+        this.mostrarMensaje("Error", "El nombre de la nueva posición no puede estar vacío")
       }
-
-
-      this.mostrarVentanaEdicion=false
     },
 
     async clickEnVerContenido(item) {
       try {
-        const result=await posiciones.getContent(item.Id)
-        let contenido
-        if (result.length>0) {
-          contenido='<table border="0" width="80%"><th>Id<th>Descripción<th>Barcode<th>Unidades'
-          let totalUnidades=0
-          this.detallePosicionesContenido=[]
-          result.forEach(element => {
-            contenido+="<tr>"
-            contenido+="<td>"+element.IdProducto+"</td>"
-            contenido+="<td>"+element.NombreProducto+"</td>"
-            contenido+="<td>"+element.BarcodeProducto+"</td>"
-            contenido+=`<td align="right">${element.Unidades}</td>`
-            contenido+="</tr>"
-            totalUnidades+=element.Unidades
-            //
-            this.detallePosicionesContenido.push(
-              {
-                posicionId: element.posicionId,
-                IdProducto: element.IdProducto, 
-                NombreProducto: element.NombreProducto,
-                BarcodeProducto: element.BarcodeProducto,
-                Unidades: element.Unidades,
-                Fecha: element.Fecha!==null ? new Date(element.Fecha).toLocaleDateString() : ""
-              }
-            )            
-          })
-          contenido+=`<tr><td colspan=3 align="right">Total</td><td align="right"><b>${totalUnidades}</b></td></tr></table`
-        } else {
-          contenido="<img width='300' src='https://www.pngitem.com/pimgs/m/680-6805850_transparent-background-shelf-png-png-download-shelves-png.png'><h5>Nada por aquí...</h5>"
+        const result=await posicion.getContent(item.Id)
+        this.detallePosicionesContenido = result.map(el => ({
+          ...el,
+          Fecha: el.Fecha ? new Date(el.Fecha).toLocaleDateString() : ""
+        }));
+
+        if (result.length === 0) {
+           this.mostrarMensaje("Información", "La posición está vacía.")
         }
-        // store.dispatch("alertDialog/mostrar", {titulo: "Contenido de la posición "+item.Nombre, mensaje: contenido})
 
         this.detallePosicionesPosicion=item.Nombre
         this.posicionSeleccionada=item
         this.mostrarDetallePosiciones=true
-
-        // const textoPrimario="Aceptar"
-        // const textoSecundario="Imprimir el contenido"
-        // const ad={
-        //   titulo: "Contenido de la posición "+item.Nombre,
-        //   mensaje: contenido,
-        //   botonPrimario: textoPrimario,
-        //   botonSecundario: textoSecundario,
-        //   callback: ((respuesta) => {
-        //     if (respuesta===textoSecundario) {
-        //       this.exportarContenidoAExcel(item)
-        //     }
-        //   })
-        // }
-        // store.dispatch("alertDialog/mostrar", ad)
 
       } catch (error) {
         this.mostrarError(error)
@@ -343,21 +398,17 @@ export default {
 
     editFechaPosicion(id,fecha){
       posicion.editFechaPos_Prod(id,fecha)
-                .then(respuesta => {
+                .then(() => {
                     // console.log("Respuesta", respuesta);
-                    //this.getAllUsuarios()
                 })
                 .catch(puteada => {
-                    //console.log("Puteada", puteada)
                     this.mostrarError(puteada)
                 })
     },
 
-    // async exportarContenidoAExcel(item) {
     async exportarContenidoAExcel() {
-
         const item = this.posicionSeleccionada
-        const result=await posiciones.getContent(item.Id)
+        const result=await posicion.getContent(item.Id)
 
         if (result.length>0) {
             const workbook=new excel.Workbook()
@@ -376,7 +427,6 @@ export default {
             worksheet.getRow(renglon).values=['Artículo', 'Barcode', 'Nombre', 'Unidades']
             worksheet.views = [{state: 'frozen', ySplit: renglon}]
             worksheet.autoFilter = `A${renglon}:D${renglon}`
-
 
             result.forEach(e => {
                 renglon++
@@ -408,15 +458,7 @@ export default {
 
           const buf=await workbook.xlsx.writeBuffer()
           saveAs(new Blob([buf]), `Detalle_Posicion_${item.Nombre}.xlsx`)
-
-
-
-
-        } else {
         }
-
-
-
     },
     fileOnChange(archivoLeido) {
             if (archivoLeido!=null) {
@@ -457,7 +499,6 @@ export default {
       })
         if (tituloMostrado) {
             store.dispatch("alertDialog/mostrar", {titulo: "No se puede procesar", mensaje})
-            //this.mostrarMensaje("No se puede procesar", mensaje)
         } else {
             this.procesarPlanilla(planilla)
         }
@@ -474,28 +515,20 @@ export default {
               if (respuesta===textoPrimario) {
                   for(const fila of planilla){
                     try {
-                      posiciones.nueva(fila.Posicion.trim())
+                      posicion.createPosicion({ nombre: fila.Posicion.trim() })
                       .then(result => {
                         this.listaPosicionesExcel.push({
-                          posicion: result.Nombre,
+                          posicion: result.nombre,
                           estado: "Guardado"
                         })
                       })
                       .catch (error => {
-                        let mensaje=""
-                        if(error == undefined){
-                          mensaje = "La posicion solo contiene espacios"
-                        }else{
-                          mensaje = "La posicion ya existe"
-                        }
                         this.listaPosicionesExcel.push({
                           posicion: fila.Posicion,
-                          estado: mensaje
+                          estado: "Error: " + error
                         })
-                        console.log("Error", error)
                       })
                     } catch (error) {
-                      console.log("Error", error)
                       this.mostrarMensaje("Ha ocurrido un error", error)
                     }
                   }
@@ -508,7 +541,6 @@ export default {
     },
 
     imprimirListaEtiquetas(){
-      //filtrar lista
         const listaImprimir = this.listaPosiciones.filter(e => {
         const searchText = this.textoBusqueda.toUpperCase();
         return e.Nombre.toUpperCase().includes(searchText);
@@ -525,7 +557,6 @@ export default {
             callback: ((respuesta) => {
                 if (respuesta===textoPrimario) {
                   posicion.imprimirListaStickers(listaImprimir)
-                  
                 }
             })
         }
@@ -541,16 +572,22 @@ export default {
         return 'warning'
       }
     },
-    getIconoEstado(item) {
+    getOcupacionColor(percentage) {
+      if (percentage < 50) return 'green';
+      if (percentage < 85) return 'orange';
+      return 'red';
+    },
+
+    getIconoEstado() {
       return 'mdi-magnify'
     },
     async popularListaPosiciones() {
       try {
-        const response=await posiciones.getAll()
-        response.forEach(e => {
-          e.FechaInventario = (e.FechaInventario!==null && e.FechaInventario!=="") ? new Date(e.FechaInventario).toLocaleDateString() : ""
-        });
-        this.listaPosiciones=response
+        const response = await posicion.getPosicionesConCapacidad()
+        this.listaPosiciones = response.map(e => ({
+          ...e,
+          FechaInventario: (e.FechaInventario!==null && e.FechaInventario!=="") ? new Date(e.FechaInventario).toLocaleDateString() : ""
+        }));
       } catch (error) {
         this.mostrarError(error)
       }
@@ -576,6 +613,7 @@ export default {
   created() {
     store.dispatch('actualizarTituloPrincipal', 'Ver posiciones')
     this.popularListaPosiciones()
+    this.fetchCategorias()
   }
 
 }

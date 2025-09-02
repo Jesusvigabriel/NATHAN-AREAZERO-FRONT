@@ -40,11 +40,18 @@
                 <v-icon color="green" v-show="mostrarPosicionCorrecta">mdi-checkbox-marked-circle-outline</v-icon>
                 <v-icon color="red" v-show="mostrarPosicionIncorrecta">mdi-alert-circle-outline</v-icon>
             </v-col>
+            <v-col cols="5" v-if="posicionOcupacion">
+                 <v-alert dense outlined type="info">
+                    Disponible:
+                    <strong>{{ (posicionOcupacion.capacidadPesoKg - posicionOcupacion.pesoOcupadoKg).toFixed(2) }} Kg</strong>,
+                    <strong>{{ (posicionOcupacion.capacidadVolumenCm3 - posicionOcupacion.volumenOcupadoCm3).toFixed(2) }} cm³</strong>
+                </v-alert>
+            </v-col>
         </v-row>
         <v-row>
             <v-col cols="6"><v-text-field ref="barcodeArticulo" inputmode="none" prepend-inner-icon="mdi-barcode-scan" @keypress.enter="procesarBarcodeArticulo" label="Barcode artículo" v-model="barcodeArticulo" v-show="barcodeArticuloMostrar" dense ></v-text-field></v-col>
-            <v-col cols="4"><v-text-field type="number" :rules="[reglasCantidad.required, reglasCantidad.min]" ref="cantidadAIngresar" prepend-inner-icon="mdi-calculator" @keypress.enter="procesarCantidadAIngresar" label="Cantidad" v-model="cantidadAIngresar" v-show="cantidadAIngresarMostrar" dense ></v-text-field></v-col>
-            <v-col cols="2"  class="mx-0 px-0"><v-btn @click="procesarCantidadAIngresar" v-show="cantidadAIngresarMostrar"><v-icon color="blue">mdi-content-save</v-icon></v-btn></v-col>
+            <v-col cols="4"><v-text-field type="number" :rules="[reglasCantidad.required, reglasCantidad.min]" :error-messages="capacityErrorMessages" ref="cantidadAIngresar" prepend-inner-icon="mdi-calculator" @keypress.enter="procesarCantidadAIngresar" label="Cantidad" v-model="cantidadAIngresar" v-show="cantidadAIngresarMostrar" dense ></v-text-field></v-col>
+            <v-col cols="2"  class="mx-0 px-0"><v-btn @click="procesarCantidadAIngresar" v-show="cantidadAIngresarMostrar" :disabled="capacityErrorMessages.length > 0"><v-icon color="blue">mdi-content-save</v-icon></v-btn></v-col>
         </v-row>
         
         <v-row >
@@ -64,6 +71,7 @@ import store from '../store'
 import SelectorEmpresa from '../components/SelectorEmpresa'
 import router from '../router'
 import posiciones from '@/store/posiciones'
+import posicionV3 from '@/store/posicionesV3'
 import productosV3 from '@/store/productosV3'
 import {xlsx, read, utils} from 'xlsx'
 import empresas from "@/store/empresasV3"
@@ -90,9 +98,32 @@ export default {
             mostrarSelectorEmpresas: true,
             articulosPosibles: [],
             posicionActual: {},
+            posicionOcupacion: null,
             IdEmpresa: null,
             manejaStockUnitario: false,
             tienePART: false
+        }
+    },
+    computed: {
+        capacityErrorMessages() {
+            if (!this.articulo || !this.posicionOcupacion || !this.cantidadAIngresar) {
+                return [];
+            }
+
+            const errors = [];
+            const requiredWeight = (this.articulo.pesoKg || 0) * this.cantidadAIngresar;
+            const requiredVolume = (this.articulo.volumenCm3 || 0) * this.cantidadAIngresar;
+            const availableWeight = this.posicionOcupacion.capacidadPesoKg - this.posicionOcupacion.pesoOcupadoKg;
+            const availableVolume = this.posicionOcupacion.capacidadVolumenCm3 - this.posicionOcupacion.volumenOcupadoCm3;
+
+            if (requiredWeight > availableWeight) {
+                errors.push(`Peso excede la capacidad (${requiredWeight.toFixed(2)} > ${availableWeight.toFixed(2)} Kg)`);
+            }
+            if (requiredVolume > availableVolume) {
+                errors.push(`Volumen excede la capacidad (${requiredVolume.toFixed(2)} > ${availableVolume.toFixed(2)} cm³)`);
+            }
+
+            return errors;
         }
     },
     methods: {    
@@ -227,6 +258,7 @@ export default {
             this.mostrarPosicionCorrecta=false
             this.mostrarPosicionIncorrecta=false
             this.mostrarSelectorEmpresas=true
+            this.posicionOcupacion = null
             this.barcodePosicion=process.env.NODE_ENV=='development' ? '001-01-01' : '',
             this.enfocarBarcodePosicion(),
             this.manejaStockUnitario=false;
@@ -390,6 +422,7 @@ export default {
             }
         },
         async procesarBarcodePosicion() {
+            this.posicionOcupacion = null;
             try {
                 if(this.IdEmpresa==null){
                     store.dispatch('snackbar/mostrar', 'Debe seleccionar una empresa')
@@ -397,18 +430,20 @@ export default {
                     return false
                 }
                 const response=await posiciones.getByNombre(this.barcodePosicion)
-                console.log("La response", response)
                 store.dispatch('sonidos/exito')
                 this.mostrarPosicionCorrecta=true
                 this.mostrarPosicionIncorrecta=false
                 this.barcodeArticuloMostrar=true
                 this.posicionActual=response
                 this.enfocarBarcodeArticulo()
+
+                // Fetch occupancy details
+                this.posicionOcupacion = await posicionV3.getOcupacionDetalle(response.Id, this.IdEmpresa);
                 
             } catch (error) {
                 console.log("Error", error)
                 store.dispatch('sonidos/error')
-                store.dispatch('snackbar/mostrar', 'Posición inexistente')
+                store.dispatch('snackbar/mostrar', 'Posición inexistente o sin datos de capacidad.')
                 this.barcodePosicion=''
                 this.mostrarPosicionCorrecta=false
                 this.mostrarPosicionIncorrecta=true
